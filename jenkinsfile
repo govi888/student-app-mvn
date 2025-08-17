@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SERVER_IP    = '<TOMCAT_SERVER_PUBLIC_IP>'
-        SSH_CRED_ID  = 'tomcat-ssh-key'
+        SERVER_IP    = '54.209.165.111'
+        SSH_CRED_ID  = 'student-app'
         TOMCAT_PATH  = '/var/lib/tomcat10/webapps'
         TOMCAT_SVC   = 'tomcat10'
     }
@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/iamtruptimane/student-app.git'
+                git branch: 'master', url: 'https://github.com/govi888/student-app-mvn.git'
             }
         }
 
