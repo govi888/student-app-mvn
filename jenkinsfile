@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SERVER_IP    = '54.209.165.111'
-        SSH_CRED_ID  = 'student-app'
+        SERVER_IP    = '52.23.197.85'
+        SSH_CRED_ID  = 'server1'
         TOMCAT_PATH  = '/var/lib/tomcat10/webapps'
         TOMCAT_SVC   = 'tomcat10'
     }
