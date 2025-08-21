@@ -2,187 +2,111 @@
 
 This project demonstrates how to deploy a **Java Student Web Application** packaged as a WAR file using **Maven**, **Jenkins CI/CD Pipeline**, and hosted on **Tomcat** running on an AWS EC2 instance.  
 
+It covers the full flow: **Source Code → Build → Deployment → Running on Cloud**.  
+
 ---
 
 ## 📌 Project Overview
-- The application code is stored in **GitHub**.
-- **Jenkins Pipeline** is used to:
-  1. Checkout code.
-  2. Build a WAR file using **Maven**.
-  3. Deploy the WAR file into **Tomcat** on an AWS EC2 server.
-- Once deployed, the application is accessible at:  
+
+The objective of this project is to automate deployment of a Java-based Student Management application.  
+Here’s the flow:
+
+- The application source code is pushed to **GitHub**.
+- Jenkins is configured to:
+  1. **Checkout** the code from GitHub.
+  2. **Build & package** the project into a `.war` file using Maven.
+  3. **Deploy** the `.war` file to an EC2 server where Tomcat is running.
+- Finally, the deployed app is accessible through a browser at:  
   👉 `http://<EC2-PUBLIC-IP>:8080/`
+
+This ensures every new commit or change can be deployed quickly with automation.
 
 ---
 
 ## 🛠️ Tech Stack
-- **Java 17**
-- **Maven** (for build and packaging)
-- **Tomcat 10** (Application Server)
-- **Jenkins** (CI/CD)
-- **AWS EC2** (Deployment Server)
+
+- **Java 17** → Programming language used to build the application.  
+- **Maven** → Dependency management and build tool to create the WAR file.  
+- **Tomcat 10** → Application server used to host Java web applications.  
+- **Jenkins** → Automation server that runs the CI/CD pipeline.  
+- **AWS EC2** → Virtual server in the cloud to host the deployed app.  
 
 ---
 
 ## 📂 POM.xml
 
-The Maven `pom.xml` configuration for this project:
+The `pom.xml` defines:
+- Project details (`groupId`, `artifactId`, `version`).  
+- **Compiler plugin** to ensure Java 17 compatibility.  
+- **WAR plugin** so Maven packages the app into a `.war` file.  
+- Dependency on **Servlet API**, required for web applications.  
 
-```xml
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.jdevs</groupId>
-  <artifactId>studentapp</artifactId>
-  <version>2.2-SNAPSHOT</version>
-  <packaging>war</packaging>
-
-  <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
-  </properties>
-
-  <build>
-    <plugins>
-      <!-- Compiler Plugin -->
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.10.1</version>
-        <configuration>
-          <release>17</release>
-        </configuration>
-      </plugin>
-
-      <!-- WAR Plugin -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <version>3.3.2</version>
-        <configuration>
-          <warSourceDirectory>WebContent</warSourceDirectory>
-          <failOnMissingWebXml>false</failOnMissingWebXml>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
-  <dependencies>
-    <!-- Servlet API -->
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>4.0.1</version>
-      <scope>provided</scope>
-    </dependency>
-  </dependencies>
-</project>
-````
+This ensures that when we run `mvn package`, a deployable `studentapp.war` is generated.
 
 ---
 
 ## 📂 Jenkins Pipeline (Jenkinsfile)
 
-The CI/CD pipeline used in Jenkins:
+This **Jenkinsfile** defines an automated pipeline with three key stages:
 
-```groovy
-pipeline {
-    agent any
+1. **Checkout** → Pulls the latest source code from GitHub.  
+2. **Build WAR** → Runs `mvn clean package` to compile and generate the WAR file inside `target/`.  
+3. **Deploy to Tomcat** →  
+   - Copies the WAR file to the EC2 instance using **scp**.  
+   - Replaces the old deployment with the new one.  
+   - Renames it as `ROOT.war` so the app runs at the Tomcat root context (`/`).  
+   - Restarts the Tomcat service.  
 
-    environment {
-        SERVER_IP    = '3.80.109.99'
-        SSH_CRED_ID  = 'server'
-        TOMCAT_PATH  = '/var/lib/tomcat10/webapps'
-        TOMCAT_SVC   = 'tomcat10'
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/govi888/student-app-mvn.git'
-            }
-        }
-
-        stage('Build WAR') {
-            steps {
-                sh 'mvn clean package'
-            }
-        }
-
-        stage('Deploy to Tomcat') {
-            steps {
-                sshagent([SSH_CRED_ID]) {
-                    sh """
-                        WAR_FILE=\$(ls target/*.war | head -n 1)
-                        scp -o StrictHostKeyChecking=no \$WAR_FILE ubuntu@${SERVER_IP}:/tmp/
-                        ssh -o StrictHostKeyChecking=no ubuntu@${SERVER_IP} '
-                            sudo rm -rf ${TOMCAT_PATH}/*
-                            sudo mv /tmp/*.war ${TOMCAT_PATH}/ROOT.war
-                            sudo chown tomcat:tomcat ${TOMCAT_PATH}/ROOT.war
-                            sudo systemctl restart ${TOMCAT_SVC}
-                        '
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "App deployed! Visit: http://${SERVER_IP}:8080/"
-        }
-        failure {
-            echo "Deployment failed."
-        }
-    }
-}
-```
+At the end, Jenkins prints a success message with the application URL.
 
 ---
 
-## ⚡ How the Pipeline Works
+## ⚡ How the Pipeline Works (Step by Step)
 
-1. Jenkins checks out the student app source code from GitHub.
-2. Maven compiles and packages the application into a `WAR` file.
-3. Jenkins securely copies the WAR file to the EC2 server.
-4. Old deployments are cleaned, and the WAR is renamed to `ROOT.war`.
-5. Tomcat service is restarted.
-6. The app is live at `http://<EC2-IP>:8080/`.
+1. **Code Checkout** → Jenkins fetches the source code from GitHub (main branch).  
+2. **Build & Package** → Maven compiles the Java code, runs tests (if any), and generates a `WAR` file.  
+3. **File Transfer** → Jenkins copies the WAR file to the AWS EC2 server securely via SSH.  
+4. **Deployment** → The existing `ROOT.war` is removed and replaced with the new WAR.  
+5. **Restart Tomcat** → Tomcat service is restarted to load the new application.  
+6. **Access App** → The application becomes live on:  
+   `http://<EC2-PUBLIC-IP>:8080/`
+
+This makes the process **repeatable, automated, and reliable**.
 
 ---
 
 ## 📸 Screenshots
 
-### 1. Jenkins Setup
+Below are screenshots that explain the setup and deployment:
 
+### 1. Jenkins Setup
+Shows the Jenkins job configuration for the pipeline.  
 ![Jenkins Setup](images/jenkins%20setup.png)
 
 ### 2. Tomcat
-
+Tomcat server running on AWS EC2, ready to host the application.  
 ![Tomcat](images/tomcat.png)
 
 ### 3. AWS EC2 Security Groups
-
+Security groups configured to allow HTTP (8080) and SSH access.  
 ![Security Groups](images/security%20groups.png)
 
 ### 4. AWS EC2 Servers
-
+The EC2 instances used for Jenkins and Tomcat deployment.  
 ![Servers](images/servers.png)
 
 ### 5. Student Application Output
-
+Final application running successfully in the browser.  
 ![Output](images/output.png)
 
 ---
 
 ## 🌐 Accessing the Application
 
-After successful deployment, visit:
+Once deployed, the app can be accessed from a browser:  
 
 ```
-http://3.80.109.99:8080/
+
+[http://3.80.109.99:8080/](http://3.80.109.99:8080/)
+
 ```
-
----
-
-
