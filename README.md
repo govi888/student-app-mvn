@@ -185,13 +185,4 @@ http://3.80.109.99:8080/
 
 ---
 
-## 🚀 Future Enhancements
-
-* Automate deployment on **GitHub push**.
-* Dockerize the Tomcat + Student app.
-* Integrate monitoring (Prometheus + Grafana).
-* Add automated tests before deployment.
-
----
-
 
