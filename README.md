@@ -157,7 +157,7 @@ pipeline {
 
 ![Jenkins Setup](images/jenkins%20setup.png)
 
-### 2. Tomcat Installed
+### 2. Tomcat
 
 ![Tomcat](images/tomcat.png)
 
